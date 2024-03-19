@@ -1,0 +1,8 @@
+.DS_Store
+*.db
+*.log
+log/
+tmp/
+target/
+book
+nohup.out
