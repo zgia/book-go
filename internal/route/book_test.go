@@ -14,7 +14,8 @@ func TestSaveAllBooksToTxt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	all, books := SaveAllBooksToTxt()
+	var bookId int64 = 499
+	all, books := SaveAllBooksToTxt(bookId)
 
 	assert.Equal(t, all, books)
 }

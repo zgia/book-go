@@ -63,42 +63,42 @@ func GetBook(c *gin.Context) {
 	Json200(c, models.GetBook(book))
 }
 
-func SaveAllBooksToTxt() (int64, int64) {
-	count, _ := db.CountBooks("", "")
-
+func SaveAllBooksToTxt(bookId int64) (int, int) {
 	ids, err := db.QueryAllBookIds()
 	if err != nil {
 		log.Errorf("%v", err)
 		return 0, 0
 	}
 
-	i := len(ids)
+	i := 0
+	for _, id := range ids {
+		if id < bookId {
+			continue
+		}
 
-	// i := 0
-	// for _, id := range ids {
-	// 	book, err := db.QueryBook(id)
-	// 	if err != nil {
-	// 		log.Errorf("%v", err)
-	// 		break
-	// 	}
-	// 	if book == nil {
-	// 		log.Errorf("book %d is not exist", id)
-	// 		break
-	// 	}
+		book, err := db.QueryBook(id)
+		if err != nil {
+			log.Errorf("%v", err)
+			break
+		}
+		if book == nil {
+			log.Errorf("book %d is not exist", id)
+			break
+		}
 
-	// 	i++
-	// 	chapters := db.QueryAllChapters(id)
-	// 	fpath := models.WriteToFile(book, chapters)
+		i++
+		chapters := db.QueryAllChapters(id)
+		fpath := models.WriteToFile(book, chapters)
 
-	// 	srcInfo, _ := os.Lstat(fpath)
-	// 	util.MoveFile(fpath, "/Users/zgia/Desktop/books/"+srcInfo.Name())
+		srcInfo, _ := os.Lstat(fpath)
+		util.MoveFile(fpath, fmt.Sprintf("/Users/zgia/Desktop/books/%d-%s", id, srcInfo.Name()))
 
-	// 	log.Infof("book %d save to %s...", id, fpath)
-	// }
+		log.Infof("book %d save to %s...", id, fpath)
+	}
 
 	log.Infof("books saved")
 
-	return count, int64(i)
+	return len(ids), i
 }
 
 // DownloadBook downloads book to plain text file
