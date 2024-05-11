@@ -24,7 +24,7 @@ func HelloHandler(c *gin.Context) {
 	})
 }
 
-func IsLogined(c *gin.Context) {
+func UserInfo(c *gin.Context) {
 	value, exists := c.Get(middleware.JwtIdentityKey)
 
 	if !exists {

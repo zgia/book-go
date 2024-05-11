@@ -73,7 +73,7 @@ func routerAuth(authMiddleware *jwt.GinJWTMiddleware) {
 
 		auth.Use(authMiddleware.MiddlewareFunc())
 		{
-			auth.GET("/islogined", IsLogined)
+			auth.GET("/user", UserInfo)
 			auth.POST("/changepassword", ChangePassword)
 			// test
 			auth.GET("/hello", HelloHandler)
@@ -127,7 +127,7 @@ func routerApi(authMiddleware *jwt.GinJWTMiddleware) {
 
 	g.GET("/search", SearchBooks)
 
-	g.GET("/globaloptions", GlobalOptions)
+	g.GET("/options", GlobalOptions)
 
 	g.GET("/panic", func(c *gin.Context) {
 		panic("It is a custom recovery from any panics.")
