@@ -170,6 +170,14 @@ func UpdateBook(c *gin.Context) {
 		Alias:      c.PostForm("alias"),
 		Summary:    c.PostForm("summary"),
 		Source:     c.PostForm("source"),
+		Rate:       util.ParamInt64(c.PostForm("rate")),
+	}
+
+	// 给图书评分，独立的功能，且只传输了参数 rate
+	if book.Rate != 0 && book.Title == "" {
+		old, _ := db.QueryBook(bookid)
+		old.Rate = book.Rate
+		book = old
 	}
 
 	bookid, err := db.UpdateBook(book, bookid)

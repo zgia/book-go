@@ -20,6 +20,7 @@ type BookResult struct {
 	Wordcount  int64  `json:"wordcount"`
 	Isfinished int64  `json:"isfinished"`
 	Latest     string `json:"latest"`
+	Rate       int64  `json:"rate"`
 }
 
 func SearchBooks(words string, bookid int64) []map[string]string {
@@ -71,5 +72,6 @@ func GetBook(book *db.Book) *BookResult {
 		Latest:     book.Latest,
 		Wordcount:  book.Wordcount,
 		Isfinished: book.Isfinished,
+		Rate:       book.Rate,
 	}
 }

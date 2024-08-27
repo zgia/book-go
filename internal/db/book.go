@@ -21,6 +21,7 @@ type Book struct {
 	Source     string
 	Cover      string
 	Latest     string
+	Rate       int64 `xorm:"notnull default 0"`
 	Wordcount  int64 `xorm:"notnull default 0"`
 	Isfinished int64 `xorm:"notnull default 0"`
 	Createdat  int64 `xorm:"created notnull default 0"`
@@ -240,7 +241,7 @@ func UpdateBook(book *Book, bookid int64) (int64, error) {
 
 		bookid = book.Id
 	} else {
-		if _, err = sess.ID(bookid).Cols("categoryid", "title", "author", "alias", "summary", "source", "wordcound", "isfinished").Update(book); err != nil {
+		if _, err = sess.ID(bookid).Cols("categoryid", "title", "author", "alias", "summary", "source", "wordcound", "isfinished", "rate").Update(book); err != nil {
 			return 0, err
 		}
 	}
