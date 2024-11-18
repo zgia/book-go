@@ -99,6 +99,7 @@ func routerBook(authMiddleware *jwt.GinJWTMiddleware) {
 		book.Use(authMiddleware.MiddlewareFunc())
 		{
 			book.GET("/books", ListBooks)
+			book.GET("/books/size", getBooksSize)
 			book.GET("/:bookid", GetBook)
 			book.POST("/:bookid", UpdateBook)
 			book.DELETE("/:bookid", DeleteBook)

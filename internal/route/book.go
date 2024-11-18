@@ -37,6 +37,13 @@ func ListBooks(c *gin.Context) {
 	Json200(c, books)
 }
 
+func getBooksSize(c *gin.Context) {
+
+	result := models.GetBooksSize()
+
+	Json200(c, result)
+}
+
 func BookExists(c *gin.Context, bookid int64) *db.Book {
 	book, err := db.QueryBook(bookid)
 

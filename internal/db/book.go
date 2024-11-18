@@ -193,6 +193,19 @@ func QueryBooksByKeywords(words string, bookid int64) []map[string]string {
 	return results
 }
 
+func QueryBooksSize() map[string]string {
+
+	sql := "SELECT CEILING(sum(data_length)/1024/1024) AS data_size, CEILING(sum(index_length)/1024/1024) AS index_size FROM information_schema.tables WHERE TABLE_SCHEMA = ?"
+
+	var results []map[string]string
+
+	if err := x.SQL(sql, conf.Database.Name).Find(&results); err != nil {
+		panic(fmt.Sprintf("Cannot query books size, %s", err.Error()))
+	}
+
+	return results[0]
+}
+
 // QueryBook gets a book info
 func QueryBook(bookid int64) (*Book, error) {
 	book := &Book{

@@ -58,6 +58,10 @@ func ListBooks(page int, words, searchMode string) (map[string]any, error) {
 	return data, nil
 }
 
+func GetBooksSize() map[string]string {
+	return db.QueryBooksSize()
+}
+
 func GetBook(book *db.Book) *BookResult {
 
 	return &BookResult{
