@@ -8,29 +8,32 @@ import (
 	"xorm.io/builder"
 
 	"zgia.net/book/internal/conf"
+	log "zgia.net/book/internal/logger"
 	"zgia.net/book/internal/util"
 )
 
 type Book struct {
-	Id         int64 `xorm:"pk autoincr"`
-	Categoryid int64 `xorm:"notnull default 0"`
-	Title      string
-	Alias      string
-	Author     string
-	Summary    string
-	Source     string
-	Cover      string
-	Latest     string
-	Rate       int64 `xorm:"notnull default 0"`
-	Wordcount  int64 `xorm:"notnull default 0"`
-	Isfinished int64 `xorm:"notnull default 0"`
-	Createdat  int64 `xorm:"created notnull default 0"`
-	Updatedat  int64 `xorm:"updated notnull default 0"`
-	Deletedat  int64 `xorm:"deleted notnull default 0"`
+	Id               int64 `xorm:"pk autoincr"`
+	Categoryid       int64 `xorm:"notnull default 0"`
+	Title            string
+	Alias            string
+	Author           string `xorm:"<-"`
+	Authorid         int64
+	AuthorFormerName string `xorm:"<-"`
+	Summary          string
+	Source           string
+	Cover            string
+	Latest           string
+	Rate             int64 `xorm:"notnull default 0"`
+	Wordcount        int64 `xorm:"notnull default 0"`
+	Isfinished       int64 `xorm:"notnull default 0"`
+	Createdat        int64 `xorm:"created notnull default 0"`
+	Updatedat        int64 `xorm:"updated notnull default 0"`
+	Deletedat        int64 `xorm:"deleted notnull default 0"`
 }
 
 func (b *Book) String() string {
-	return fmt.Sprintf("Book: %v(%v), %v", b.Title, b.Author, b.Summary)
+	return fmt.Sprintf("Book: %s(%s-%d), %s", b.Title, b.Author, b.Authorid, b.Summary)
 }
 
 func condition(words, searchMode string) (string, []interface{}) {
@@ -41,11 +44,14 @@ func condition(words, searchMode string) (string, []interface{}) {
 
 	if words != "" {
 		if searchMode == "categ" {
-			cond = "categoryid = ?"
+			cond = "book.categoryid = ?"
 		} else if searchMode == "author" {
-			cond = "author = ?"
+			cond = "book_author.name LIKE ? OR book_author.former_name LIKE ?"
+			words = "%" + words + "%"
+
+			alias = true
 		} else {
-			cond = "(title LIKE ? OR alias LIKE ?)"
+			cond = "title LIKE ? OR alias LIKE ?"
 			words = "%" + words + "%"
 
 			alias = true
@@ -65,7 +71,7 @@ func condition(words, searchMode string) (string, []interface{}) {
 func CountBooks(words, searchMode string) (int64, error) {
 	cond, args := condition(words, searchMode)
 
-	return x.Where(cond, args...).Count(new(Book))
+	return x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id").Where(cond, args...).Count(new(Book))
 
 }
 
@@ -75,7 +81,7 @@ func QueryBooks(page int, words, searchMode string) ([]*Book, error) {
 	books := make([]*Book, 0, pageSize)
 	cond, args := condition(words, searchMode)
 
-	return books, x.Where(cond, args...).Desc("updatedat").Desc("id").Limit(pageSize, (page-1)*pageSize).Find(&books)
+	return books, x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id").Select("book.*,book_author.name AS author,book_author.former_name AS author_former_name").Where(cond, args...).Desc("book.updatedat").Desc("book.id").Limit(pageSize, (page-1)*pageSize).Find(&books)
 }
 
 func QueryAllBookIds() ([]int64, error) {
@@ -211,7 +217,7 @@ func QueryBook(bookid int64) (*Book, error) {
 	book := &Book{
 		Id: bookid,
 	}
-	has, err := x.Get(book)
+	has, err := x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id").Select("book.*,book_author.name AS author,book_author.former_name AS author_former_name").Get(book)
 
 	if err != nil {
 		return nil, err
@@ -227,6 +233,10 @@ func QueryBook(bookid int64) (*Book, error) {
 // UpdateBook updates/creates a book
 func UpdateBook(book *Book, bookid int64) (int64, error) {
 	var err error
+
+	// 处理作者
+	book.Authorid, err = CheckAuthor(book.Author, "")
+	log.Infof("%v, %v", book, err)
 
 	sess := x.NewSession()
 	defer sess.Close()
@@ -254,7 +264,7 @@ func UpdateBook(book *Book, bookid int64) (int64, error) {
 
 		bookid = book.Id
 	} else {
-		if _, err = sess.ID(bookid).Cols("categoryid", "title", "author", "alias", "summary", "source", "wordcound", "isfinished", "rate").Update(book); err != nil {
+		if _, err = sess.ID(bookid).Cols("categoryid", "title", "authorid", "alias", "summary", "source", "wordcound", "isfinished", "rate").Update(book); err != nil {
 			return 0, err
 		}
 	}

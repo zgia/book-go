@@ -9,18 +9,19 @@ import (
 
 // 接口返回
 type BookResult struct {
-	Id         int64  `json:"id"`
-	Categoryid int64  `json:"categoryid"`
-	Title      string `json:"title"`
-	Author     string `json:"author"`
-	Alias      string `json:"alias"`
-	Summary    string `json:"summary"`
-	Source     string `json:"source"`
-	Cover      string `json:"cover"`
-	Wordcount  int64  `json:"wordcount"`
-	Isfinished int64  `json:"isfinished"`
-	Latest     string `json:"latest"`
-	Rate       int64  `json:"rate"`
+	Id               int64  `json:"id"`
+	Categoryid       int64  `json:"categoryid"`
+	Title            string `json:"title"`
+	Author           string `json:"author"`
+	AuthorFormerName string `json:"author_former_name"`
+	Alias            string `json:"alias"`
+	Summary          string `json:"summary"`
+	Source           string `json:"source"`
+	Cover            string `json:"cover"`
+	Wordcount        int64  `json:"wordcount"`
+	Isfinished       int64  `json:"isfinished"`
+	Latest           string `json:"latest"`
+	Rate             int64  `json:"rate"`
 }
 
 func SearchBooks(words string, bookid int64) []map[string]string {
@@ -65,17 +66,18 @@ func GetBooksSize() map[string]string {
 func GetBook(book *db.Book) *BookResult {
 
 	return &BookResult{
-		Id:         book.Id,
-		Categoryid: book.Categoryid,
-		Title:      book.Title,
-		Author:     book.Author,
-		Alias:      book.Alias,
-		Summary:    book.Summary,
-		Source:     book.Source,
-		Cover:      book.Cover,
-		Latest:     book.Latest,
-		Wordcount:  book.Wordcount,
-		Isfinished: book.Isfinished,
-		Rate:       book.Rate,
+		Id:               book.Id,
+		Categoryid:       book.Categoryid,
+		Title:            book.Title,
+		Author:           book.Author,
+		AuthorFormerName: book.AuthorFormerName,
+		Alias:            book.Alias,
+		Summary:          book.Summary,
+		Source:           book.Source,
+		Cover:            book.Cover,
+		Latest:           book.Latest,
+		Wordcount:        book.Wordcount,
+		Isfinished:       book.Isfinished,
+		Rate:             book.Rate,
 	}
 }
