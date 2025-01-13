@@ -121,6 +121,19 @@ func routerBook(authMiddleware *jwt.GinJWTMiddleware) {
 	}
 }
 
+func routerAuthor(authMiddleware *jwt.GinJWTMiddleware) {
+	author := g.Group("/author")
+	{
+		author.Use(authMiddleware.MiddlewareFunc())
+		{
+			author.GET("/index", ListAuthors)
+			author.GET("/:authorid", GetAuthor)
+			author.POST("/:authorid", UpdateAuthor)
+			author.DELETE("/:authorid", DeleteAuthor)
+		}
+	}
+}
+
 func routerApi(authMiddleware *jwt.GinJWTMiddleware) {
 	g.GET("/", func(c *gin.Context) {
 		Json200(c, nil)
@@ -193,5 +206,6 @@ func startRoutes() {
 	routerAuth(authMiddleware)
 	routerApi(authMiddleware)
 	routerBook(authMiddleware)
+	routerAuthor(authMiddleware)
 	routerConfig(authMiddleware)
 }
