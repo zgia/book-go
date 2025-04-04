@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 	log "zgia.net/book/internal/logger"
+	"zgia.net/book/internal/util"
 )
 
 type Chapter struct {
@@ -58,6 +59,8 @@ func QueryChapter(bookid, chapterid int64, next int) (map[string]any, error) {
 		return nil, nil
 	}
 
+	log.Infof("QueryChapter: %#v", chapter)
+
 	current := map[string]any{
 		"id":    chapter.Id,
 		"title": chapter.Title,
@@ -85,24 +88,36 @@ func QueryChapter(bookid, chapterid int64, next int) (map[string]any, error) {
 	// 前一篇，后一篇，用于阅读时翻页
 	if next != 0 {
 
+		volumes, _ := QueryVolumes(chapter.Bookid)
+		log.Infof("Volumes: %#v", volumes)
+		prevVolId, nextVolId := util.GetPrevNextId(volumes, chapter.Volumeid)
+
+		log.Infof("prevVolId= %d, nextVolId= %d", prevVolId, nextVolId)
+
 		// 下一篇
 		nextc := &Chapter{}
 
-		if has, err = x.Where("id>?", chapterid).
-			And("bookid=?", chapter.Bookid).
-			Asc("id").
-			Get(nextc); has && err == nil {
-
+		// 先检查同一卷内的
+		has, err = x.Where("id>?", chapterid).And("bookid=?", chapter.Bookid).And("volumeid=?", chapter.Volumeid).Asc("id").Get(nextc)
+		if has && err == nil {
 			data["next"] = map[string]any{"id": nextc.Id, "title": nextc.Title}
+		} else if nextVolId != 0 {
+			has, err = x.Where("bookid=?", chapter.Bookid).And("volumeid=?", nextVolId).Asc("id").Get(nextc)
+			if has && err == nil {
+				data["next"] = map[string]any{"id": nextc.Id, "title": nextc.Title}
+			}
 		}
 
 		prevc := &Chapter{}
-		if has, err = x.Where("id<?", chapterid).
-			And("bookid=?", chapter.Bookid).
-			Desc("id").
-			Get(prevc); has && err == nil {
-
+		// 先检查同一卷内的
+		has, err = x.Where("id<?", chapterid).And("bookid=?", chapter.Bookid).And("volumeid=?", chapter.Volumeid).Desc("id").Get(prevc)
+		if has && err == nil {
 			data["prev"] = map[string]any{"id": prevc.Id, "title": prevc.Title}
+		} else if prevVolId != 0 {
+			has, err = x.Where("bookid=?", chapter.Bookid).And("volumeid=?", prevVolId).Desc("id").Get(prevc)
+			if has && err == nil {
+				data["prev"] = map[string]any{"id": prevc.Id, "title": prevc.Title}
+			}
 		}
 	}
 

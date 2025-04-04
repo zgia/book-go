@@ -13,6 +13,10 @@ import (
 	"github.com/unknwon/com"
 )
 
+type HasID interface {
+	GetID() int64
+}
+
 // EnsureAbs prepends the WorkDir to the given path if it is not an absolute path.
 func EnsureAbs(path string) string {
 	if filepath.IsAbs(path) {
@@ -192,4 +196,21 @@ func Substring(input string, start int, length int) string {
 	}
 
 	return string(asRunes[start : start+length])
+}
+
+// GetPrevNextId 泛型函数，查找目标 ID 的前一个和后一个 ID。
+// 如果没有前一个或后一个，则返回 0。
+func GetPrevNextId[T HasID](list []T, targetID int64) (prev, next int64) {
+	for i, item := range list {
+		if item.GetID() == targetID {
+			if i > 0 {
+				prev = list[i-1].GetID()
+			}
+			if i < len(list)-1 {
+				next = list[i+1].GetID()
+			}
+			break
+		}
+	}
+	return
 }

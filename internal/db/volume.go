@@ -1,8 +1,6 @@
 package db
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type Volume struct {
 	Id        int64 `xorm:"pk autoincr"`
@@ -13,6 +11,10 @@ type Volume struct {
 	Createdat int64 `xorm:"created notnull default 0"`
 	Updatedat int64 `xorm:"updated notnull default 0"`
 	Deletedat int64 `xorm:"deleted notnull default 0"`
+}
+
+func (v *Volume) GetID() int64 {
+	return v.Id
 }
 
 func (b *Volume) String() string {

@@ -174,12 +174,13 @@ func QueryAllChapters(bookid int64) []map[string]string {
 func QueryBooksByKeywords(words string, bookid int64) []map[string]string {
 
 	search_books_sql := "SELECT txt AS content,cha.id AS chaId,cha.title AS chaTitle,vol.title AS volTitle " +
-		",volumeid AS volId,book.id AS bookId,book.title AS bookTitle,author " +
+		",volumeid AS volId,book.id AS bookId,book.title AS bookTitle,book_author.name AS author " +
 		"FROM chapter AS cha " +
 		"INNER JOIN content AS content ON cha.id=content.chapterid " +
 		"INNER JOIN volume AS vol ON vol.id=cha.volumeid " +
 		"INNER JOIN book AS book ON cha.bookid=book.id " +
-		"WHERE BOOKID_CONDITION content.txt LIKE ? AND cha.deletedat=0 ORDER BY cha.id LIMIT 100"
+		"LEFT JOIN book_author AS book_author ON book_author.id=book.authorid " +
+		"WHERE _BOOKID_CONDITION_ content.txt LIKE ? AND cha.deletedat=0 ORDER BY cha.id LIMIT 100"
 
 	var results []map[string]string
 
@@ -190,7 +191,7 @@ func QueryBooksByKeywords(words string, bookid int64) []map[string]string {
 		args = append(args, bookid)
 	}
 	args = append(args, "%"+words+"%")
-	search_books_sql = strings.Replace(search_books_sql, "BOOKID_CONDITION", bookidCond, 1)
+	search_books_sql = strings.Replace(search_books_sql, "_BOOKID_CONDITION_", bookidCond, 1)
 
 	if err := x.SQL(search_books_sql, args...).Find(&results); err != nil {
 		panic(fmt.Sprintf("Cannot query book(%d) by keywords(%s) chapters, %s", bookid, words, err.Error()))
