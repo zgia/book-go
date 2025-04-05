@@ -13,7 +13,7 @@ import (
 
 func ListAuthors(c *gin.Context) {
 	page := util.PageNum(c.Query("p"))
-	words := c.Query("words")
+	words := c.Query("q")
 
 	authors, err := models.ListAuthors(page, words)
 

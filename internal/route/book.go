@@ -14,7 +14,7 @@ import (
 )
 
 func SearchBooks(c *gin.Context) {
-	words := c.Query("words")
+	words := c.Query("q")
 	bookid := util.ParamInt64(c.Query("bookid"))
 
 	books := models.SearchBooks(words, bookid)
@@ -24,7 +24,7 @@ func SearchBooks(c *gin.Context) {
 
 func ListBooks(c *gin.Context) {
 	page := util.PageNum(c.Query("p"))
-	words := c.Query("words")
+	words := c.Query("q")
 	searchMode := c.Query("smode")
 
 	books, err := models.ListBooks(page, words, searchMode)
