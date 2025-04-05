@@ -2,33 +2,57 @@ package models
 
 import (
 	"zgia.net/book/internal/db"
+	log "zgia.net/book/internal/logger"
 )
+
+type AuthorBooks struct {
+	Id    int64  `json:"id"`
+	Title string `json:"title"`
+}
 
 // 接口返回
 type AuthorResult struct {
-	Id         int64    `json:"id"`
-	Name       string   `json:"name"`
-	FormerName string   `json:"former_name"`
-	Books      []string `json:"books"`
+	Id         int64         `json:"id"`
+	Name       string        `json:"name"`
+	FormerName string        `json:"former_name"`
+	Books      []AuthorBooks `json:"books"`
 }
 
 func ListAuthors(page int, words string) (map[string]any, error) {
-	books, err := db.QueryAuthors(page, words)
+	authors, err := db.QueryAuthors(page, words)
 
 	if err != nil {
 		return nil, err
 	}
 
-	bs := make([]*AuthorResult, len(books))
+	// 获取作者写的书
+	var aids []int64
+	for _, v := range authors {
+		aids = append(aids, v.Id)
+	}
+	books, _ := db.QueryBooksByIds(aids)
 
-	for i, v := range books {
-		bs[i] = GetAuthor(v)
+	grouped := make(map[int64][]AuthorBooks)
+	for _, book := range books {
+		res := AuthorBooks{
+			Id:    book.Id,
+			Title: book.Title,
+		}
+		grouped[book.Authorid] = append(grouped[book.Authorid], res)
+	}
+	log.Infof("ListAuthors: %#v", grouped)
+
+	// 保留必要元素
+	ats := make([]*AuthorResult, len(authors))
+	for i, v := range authors {
+		ats[i] = GetAuthor(v)
+		ats[i].Books = grouped[v.Id]
 	}
 
 	total, _ := db.CountAuthors(words)
 	data := map[string]any{
 		"total": total,
-		"items": bs,
+		"items": ats,
 	}
 
 	return data, nil

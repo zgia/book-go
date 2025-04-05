@@ -228,3 +228,31 @@ func Panicf(args ...interface{}) {
 func Fatalf(template string, args ...interface{}) {
 	Log.SugaredLogger.Fatalf(template, args...)
 }
+
+func Debugw(template string, keysAndValues ...interface{}) {
+	Log.SugaredLogger.Debugw(template, keysAndValues...)
+}
+
+func Infow(template string, keysAndValues ...interface{}) {
+	Log.SugaredLogger.Infow(template, keysAndValues...)
+}
+
+func Warnw(template string, keysAndValues ...interface{}) {
+	Log.SugaredLogger.Warnw(template, keysAndValues...)
+}
+
+func Errorw(template string, keysAndValues ...interface{}) {
+	Log.SugaredLogger.Errorw(template, keysAndValues...)
+}
+
+func DPanicw(keysAndValues ...interface{}) {
+	Log.SugaredLogger.DPanic(keysAndValues...)
+}
+
+func Panicw(keysAndValues ...interface{}) {
+	Log.SugaredLogger.Panic(keysAndValues...)
+}
+
+func Fatalw(template string, keysAndValues ...interface{}) {
+	Log.SugaredLogger.Fatalw(template, keysAndValues...)
+}

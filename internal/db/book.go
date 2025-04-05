@@ -84,6 +84,13 @@ func QueryBooks(page int, words, searchMode string) ([]*Book, error) {
 	return books, x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id").Select("book.*,book_author.name AS author,book_author.former_name AS author_former_name").Where(cond, args...).Desc("book.updatedat").Desc("book.id").Limit(pageSize, (page-1)*pageSize).Find(&books)
 }
 
+// ListBooks returns number of books in given page.
+func QueryBooksByIds(ids []int64) ([]*Book, error) {
+	books := make([]*Book, 0, len(ids))
+
+	return books, x.Table("book").Select("id, title,authorid").In("authorid", ids).Find(&books)
+}
+
 func QueryAllBookIds() ([]int64, error) {
 	var ids []int64
 	err := x.Table("book").Cols("id").Find(&ids)
