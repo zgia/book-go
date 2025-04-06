@@ -76,12 +76,20 @@ func CountBooks(words, searchMode string) (int64, error) {
 }
 
 // ListBooks returns number of books in given page.
-func QueryBooks(page int, words, searchMode string) ([]*Book, error) {
+func QueryBooks(page int, words, searchMode, orderby string) ([]*Book, error) {
 	pageSize := conf.PageSize(0)
 	books := make([]*Book, 0, pageSize)
 	cond, args := condition(words, searchMode)
 
-	return books, x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id").Select("book.*,book_author.name AS author,book_author.former_name AS author_former_name").Where(cond, args...).Desc("book.updatedat").Desc("book.id").Limit(pageSize, (page-1)*pageSize).Find(&books)
+	session := x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id").Select("book.*,book_author.name AS author,book_author.former_name AS author_former_name").Where(cond, args...)
+
+	if orderby == "wc" {
+		session = session.Desc("book.wordcount")
+	} else {
+		session = session.Desc("book.updatedat").Desc("book.id")
+	}
+
+	return books, session.Limit(pageSize, (page-1)*pageSize).Find(&books)
 }
 
 // ListBooks returns number of books in given page.

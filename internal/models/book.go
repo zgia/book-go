@@ -37,8 +37,8 @@ func SearchBooks(words string, bookid int64) []map[string]string {
 	return chapters
 }
 
-func ListBooks(page int, words, searchMode string) (map[string]any, error) {
-	books, err := db.QueryBooks(page, words, searchMode)
+func ListBooks(page int, words, searchMode, orderby string) (map[string]any, error) {
+	books, err := db.QueryBooks(page, words, searchMode, orderby)
 
 	if err != nil {
 		return nil, err
