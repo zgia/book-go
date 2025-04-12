@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"xorm.io/builder"
+	"xorm.io/xorm"
 
 	"zgia.net/book/internal/conf"
 	log "zgia.net/book/internal/logger"
@@ -36,57 +37,52 @@ func (b *Book) String() string {
 	return fmt.Sprintf("Book: %s(%s-%d), %s", b.Title, b.Author, b.Authorid, b.Summary)
 }
 
-func condition(words, searchMode string) (string, []interface{}) {
-	var cond = ""
-	//var args = []string{}
-	args := make([]interface{}, 0, 1)
-	var alias = false
+func condition(session *xorm.Session, words, searchMode, rate string) {
 
 	if words != "" {
 		if searchMode == "categ" {
-			cond = "book.categoryid = ?"
+			session.Where("book.categoryid=?", words)
 		} else if searchMode == "author" {
-			cond = "book_author.name LIKE ? OR book_author.former_name LIKE ?"
-			words = "%" + words + "%"
-
-			alias = true
+			session.Where("book_author.name LIKE ? OR book_author.former_name LIKE ?", "%"+words+"%", "%"+words+"%")
 		} else {
-			cond = "title LIKE ? OR alias LIKE ?"
-			words = "%" + words + "%"
-
-			alias = true
-		}
-
-		args = append(args, words)
-
-		if alias {
-			args = append(args, words)
+			session.Where("title LIKE ? OR alias LIKE ?", "%"+words+"%", "%"+words+"%")
 		}
 	}
 
-	return cond, args
+	rates := util.ParseRates(rate)
+	if len(rates) > 0 {
+		session.In("rate", rates)
+	}
 }
 
 // CountBooks returns number of books.
-func CountBooks(words, searchMode string) (int64, error) {
-	cond, args := condition(words, searchMode)
+func CountBooks(words, searchMode, rate string) (int64, error) {
+	session := x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id")
+	condition(session, words, searchMode, rate)
 
-	return x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id").Where(cond, args...).Count(new(Book))
+	return session.Count(new(Book))
 
 }
 
 // ListBooks returns number of books in given page.
-func QueryBooks(page int, words, searchMode, orderby string) ([]*Book, error) {
+func QueryBooks(page int, words, searchMode, orderby, direction, rate string) ([]*Book, error) {
 	pageSize := conf.PageSize(0)
 	books := make([]*Book, 0, pageSize)
-	cond, args := condition(words, searchMode)
 
-	session := x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id").Select("book.*,book_author.name AS author,book_author.former_name AS author_former_name").Where(cond, args...)
+	session := x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id").Select("book.*,book_author.name AS author,book_author.former_name AS author_former_name")
+	condition(session, words, searchMode, rate)
 
-	if orderby == "wc" {
-		session = session.Desc("book.wordcount")
+	// 排序
+	orders := map[string]int{"id": 1, "wordcount": 1, "updatedat": 1, "rate": 1}
+	if _, ok := orders[orderby]; !ok {
+		orderby = "updatedat"
+	}
+	orderby = fmt.Sprintf("book.%s", orderby)
+
+	if direction != "ascending" {
+		session.Desc(orderby)
 	} else {
-		session = session.Desc("book.updatedat").Desc("book.id")
+		session.Asc(orderby)
 	}
 
 	return books, session.Limit(pageSize, (page-1)*pageSize).Find(&books)

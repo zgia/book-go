@@ -37,8 +37,8 @@ func SearchBooks(words string, bookid int64) []map[string]string {
 	return chapters
 }
 
-func ListBooks(page int, words, searchMode, orderby string) (map[string]any, error) {
-	books, err := db.QueryBooks(page, words, searchMode, orderby)
+func ListBooks(page int, words, searchMode, orderby, direction, rate string) (map[string]any, error) {
+	books, err := db.QueryBooks(page, words, searchMode, orderby, direction, rate)
 
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func ListBooks(page int, words, searchMode, orderby string) (map[string]any, err
 		bs[i] = GetBook(v)
 	}
 
-	total, _ := db.CountBooks(words, searchMode)
+	total, _ := db.CountBooks(words, searchMode, rate)
 	data := map[string]any{
 		"total": total,
 		"items": bs,

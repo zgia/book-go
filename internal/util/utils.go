@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 	"unsafe"
@@ -213,4 +214,27 @@ func GetPrevNextId[T HasID](list []T, targetID int64) (prev, next int64) {
 		}
 	}
 	return
+}
+
+// ParseRate 把类似 "1, 2,3 ,4" 这样的字符串，
+// 转成 []int{1,2,3,4}。会自动去除前后空格、丢弃空项和非数字项。
+func ParseRates(rate string) []int {
+	var result []int
+
+	// 直接分割，即使 rate 为空，也会得到 [""]，下面会被跳过
+	parts := strings.Split(rate, ",")
+	for _, part := range parts {
+		// 去除前后空格
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		// 尝试转换为整数，非纯数字（含字母、符号等）会出错并被丢弃
+		if n, err := strconv.Atoi(part); err == nil {
+			result = append(result, n)
+		}
+	}
+
+	return result
 }

@@ -26,9 +26,14 @@ func ListBooks(c *gin.Context) {
 	page := util.PageNum(c.Query("p"))
 	words := c.Query("q")
 	searchMode := c.Query("sm")
+	// 排序字段
 	orderby := c.Query("ob")
+	// 'descending' | 'ascending' | null
+	direction := c.Query("dt")
+	// 5 | 5,4,3
+	rate := c.Query("rate")
 
-	books, err := models.ListBooks(page, words, searchMode, orderby)
+	books, err := models.ListBooks(page, words, searchMode, orderby, direction, rate)
 
 	if err != nil {
 		Json500(c, "List books: "+err.Error())
