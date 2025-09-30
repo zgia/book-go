@@ -43,7 +43,7 @@ func condition(session *xorm.Session, words, searchMode, rate string) {
 		if searchMode == "categ" {
 			session.Where("book.categoryid=?", words)
 		} else if searchMode == "author" {
-			session.Where("book_author.name LIKE ? OR book_author.former_name LIKE ?", "%"+words+"%", "%"+words+"%")
+			session.Where("au.name LIKE ? OR au.former_name LIKE ?", "%"+words+"%", "%"+words+"%")
 		} else {
 			session.Where("title LIKE ? OR alias LIKE ?", "%"+words+"%", "%"+words+"%")
 		}
@@ -57,7 +57,7 @@ func condition(session *xorm.Session, words, searchMode, rate string) {
 
 // CountBooks returns number of books.
 func CountBooks(words, searchMode, rate string) (int64, error) {
-	session := x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id")
+	session := x.Table("book").Join("LEFT", "author AS au", "book.authorid = au.id")
 	condition(session, words, searchMode, rate)
 
 	return session.Count(new(Book))
@@ -69,7 +69,7 @@ func QueryBooks(page int, words, searchMode, orderby, direction, rate string) ([
 	pageSize := conf.PageSize(0)
 	books := make([]*Book, 0, pageSize)
 
-	session := x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id").Select("book.*,book_author.name AS author,book_author.former_name AS author_former_name")
+	session := x.Table("book").Join("LEFT", "author AS au", "book.authorid = au.id").Select("book.*,au.name AS author,au.former_name AS author_former_name")
 	condition(session, words, searchMode, rate)
 
 	// 排序
@@ -185,12 +185,12 @@ func QueryAllChapters(bookid int64) []map[string]string {
 func QueryBooksByKeywords(words string, bookid int64) []map[string]string {
 
 	search_books_sql := "SELECT txt AS content,cha.id AS chaId,cha.title AS chaTitle,vol.title AS volTitle " +
-		",volumeid AS volId,book.id AS bookId,book.title AS bookTitle,book_author.name AS author " +
+		",volumeid AS volId,book.id AS bookId,book.title AS bookTitle,au.name AS author " +
 		"FROM chapter AS cha " +
 		"INNER JOIN content AS content ON cha.id=content.chapterid " +
 		"INNER JOIN volume AS vol ON vol.id=cha.volumeid " +
 		"INNER JOIN book AS book ON cha.bookid=book.id " +
-		"LEFT JOIN book_author AS book_author ON book_author.id=book.authorid " +
+		"LEFT JOIN author AS au ON au.id=book.authorid " +
 		"WHERE _BOOKID_CONDITION_ content.txt LIKE ? AND cha.deletedat=0 ORDER BY cha.id LIMIT 100"
 
 	var results []map[string]string
@@ -229,7 +229,7 @@ func QueryBook(bookid int64) (*Book, error) {
 	book := &Book{
 		Id: bookid,
 	}
-	has, err := x.Table("book").Join("LEFT", "book_author", "book.authorid = book_author.id").Select("book.*,book_author.name AS author,book_author.former_name AS author_former_name").Get(book)
+	has, err := x.Table("book").Join("LEFT", "author AS au", "book.authorid = au.id").Select("book.*,au.name AS author,au.former_name AS author_former_name").Get(book)
 
 	if err != nil {
 		return nil, err

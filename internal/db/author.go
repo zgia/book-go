@@ -17,7 +17,7 @@ type Author struct {
 }
 
 func TableName() string {
-	return "book_author"
+	return "author"
 }
 
 func (b *Author) String() string {
@@ -30,7 +30,7 @@ func CheckAuthor(name, formerName string) (int64, error) {
 	}
 
 	var ids []int64
-	err := x.Table("book_author").Cols("id").Where("name=? OR FIND_IN_SET(?, former_name)", name, name).Limit(1).Find(&ids)
+	err := x.Table(TableName()).Cols("id").Where("name=? OR FIND_IN_SET(?, former_name)", name, name).Limit(1).Find(&ids)
 	if err != nil {
 		return 0, err
 	}
@@ -43,7 +43,7 @@ func CheckAuthor(name, formerName string) (int64, error) {
 		Name:       name,
 		FormerName: formerName,
 	}
-	_, err = x.Table("book_author").Insert(auth)
+	_, err = x.Table(TableName()).Insert(auth)
 	if err != nil {
 		return 0, err
 	}
@@ -56,7 +56,7 @@ func CheckAuthor(name, formerName string) (int64, error) {
 func CountAuthors(words string) (int64, error) {
 	words = "%" + words + "%"
 
-	return x.Table("book_author").Where("name LIKE ? OR former_name LIKE ?", words, words).Count(new(Author))
+	return x.Table(TableName()).Where("name LIKE ? OR former_name LIKE ?", words, words).Count(new(Author))
 }
 
 // ListAuthors returns number of authors in given page.
@@ -65,7 +65,7 @@ func QueryAuthors(page int, words string) ([]*Author, error) {
 	words = "%" + words + "%"
 	authors := make([]*Author, 0, pageSize)
 
-	return authors, x.Table("book_author").Where("name LIKE ? OR former_name LIKE ?", words, words).Desc("updatedat").Desc("id").Limit(pageSize, (page-1)*pageSize).Find(&authors)
+	return authors, x.Table(TableName()).Where("name LIKE ? OR former_name LIKE ?", words, words).Desc("updatedat").Desc("id").Limit(pageSize, (page-1)*pageSize).Find(&authors)
 }
 
 // QueryAuthor gets a author info
@@ -73,7 +73,7 @@ func QueryAuthor(authorid int64) (*Author, error) {
 	author := &Author{
 		Id: authorid,
 	}
-	has, err := x.Table("book_author").Get(author)
+	has, err := x.Table(TableName()).Get(author)
 
 	if err != nil {
 		return nil, err
@@ -100,14 +100,14 @@ func UpdateAuthor(author *Author, authorid int64) (int64, error) {
 	if authorid == 0 {
 		author.Createdat = time.Now().Unix()
 		author.Updatedat = author.Createdat
-		_, err = sess.Table("book_author").Insert(author)
+		_, err = sess.Table(TableName()).Insert(author)
 		if err != nil {
 			return 0, err
 		}
 
 		authorid = author.Id
 	} else {
-		if _, err = sess.Table("book_author").ID(authorid).Cols("name", "former_name").Update(author); err != nil {
+		if _, err = sess.Table(TableName()).ID(authorid).Cols("name", "former_name").Update(author); err != nil {
 			return 0, err
 		}
 	}
@@ -122,5 +122,5 @@ func UpdateAuthor(author *Author, authorid int64) (int64, error) {
 
 // DeleteAuthor deletes a author
 func DeleteAuthor(authorid int64) (int64, error) {
-	return x.Table("book_author").Delete(Author{Id: authorid})
+	return x.Table(TableName()).Delete(Author{Id: authorid})
 }
