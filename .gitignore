@@ -6,3 +6,6 @@ tmp/
 target/
 book
 nohup.out
+.cursorindexingignore
+/.specstory
+/.claude

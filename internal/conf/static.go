@@ -90,4 +90,5 @@ var I18n *i18nConf
 // Indicates which database backend is currently being used.
 var (
 	UseMySQL bool
+	UseSQLite bool
 )

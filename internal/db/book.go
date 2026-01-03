@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -212,16 +213,51 @@ func QueryBooksByKeywords(words string, bookid int64) []map[string]string {
 }
 
 func QueryBooksSize() map[string]string {
-
-	sql := "SELECT CEILING(sum(data_length)/1024/1024) AS data_size, CEILING(sum(index_length)/1024/1024) AS index_size FROM information_schema.tables WHERE TABLE_SCHEMA = ?"
-
-	var results []map[string]string
-
-	if err := x.SQL(sql, conf.Database.Name).Find(&results); err != nil {
-		panic(fmt.Sprintf("Cannot query books size, %s", err.Error()))
+	if conf.UseMySQL {
+		sql := "SELECT CEILING(sum(data_length)/1024/1024) AS data_size, CEILING(sum(index_length)/1024/1024) AS index_size FROM information_schema.tables WHERE TABLE_SCHEMA = ?"
+		var results []map[string]string
+		if err := x.SQL(sql, conf.Database.Name).Find(&results); err != nil {
+			panic(fmt.Sprintf("Cannot query books size, %s", err.Error()))
+		}
+		return results[0]
+	} else if conf.UseSQLite {
+		// Get page count and page size via PRAGMA
+		var pageSize, pageCount int64
+		// Query page_size
+		var sizeResults []map[string]string
+		if err := x.SQL("PRAGMA page_size;").Find(&sizeResults); err != nil {
+			panic(fmt.Sprintf("Cannot query SQLite page_size, %s", err.Error()))
+		}
+		if len(sizeResults) > 0 {
+			for _, v := range sizeResults[0] {
+				pageSize, _ = strconv.ParseInt(v, 10, 64)
+				break
+			}
+		}
+		// Query page_count
+		var countResults []map[string]string
+		if err := x.SQL("PRAGMA page_count;").Find(&countResults); err != nil {
+			panic(fmt.Sprintf("Cannot query SQLite page_count, %s", err.Error()))
+		}
+		if len(countResults) > 0 {
+			for _, v := range countResults[0] {
+				pageCount, _ = strconv.ParseInt(v, 10, 64)
+				break
+			}
+		}
+		// Calculate total size in bytes
+		totalBytes := pageSize * pageCount
+		// Convert to MB (ceiling)
+		totalMB := (totalBytes + 1024*1024 - 1) / (1024 * 1024)
+		if totalMB == 0 {
+			totalMB = 1 // at least 1 MB
+		}
+		return map[string]string{
+			"data_size":  strconv.FormatInt(totalMB, 10),
+			"index_size": "0",
+		}
 	}
-
-	return results[0]
+	panic("unknown database type")
 }
 
 // QueryBook gets a book info

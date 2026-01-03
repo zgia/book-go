@@ -6,7 +6,7 @@
 ## 基础框架
 
 1. [gin](https://github.com/gin-gonic/gin/) 
-2. [xorm](https://gitea.com/xorm/xorm)，*目前仅支持MySQL*
+2. [xorm](https://gitea.com/xorm/xorm)，支持MySQL和SQLite
 
 ## go run
 编译时，不会复制conf目录，因此找不到app.ini，可以使用env方式解决
