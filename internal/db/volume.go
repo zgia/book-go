@@ -57,17 +57,20 @@ func UpdateVolume(volumeid int64, volume *Volume) (int64, error) {
 	if volumeid == 0 {
 		_, err = sess.Insert(volume)
 		if err != nil {
+			sess.Rollback()
 			return 0, err
 		}
 
 		volumeid = volume.Id
 	} else {
-		if _, err = sess.ID(volumeid).Cols("title", "summary").Update(volume); err != nil {
+		if _, err = sess.ID(volumeid).Cols("title", "summary", "updatedat").Update(volume); err != nil {
+			sess.Rollback()
 			return 0, err
 		}
 	}
 
 	if err = sess.Commit(); err != nil {
+		sess.Rollback()
 		return 0, err
 	}
 

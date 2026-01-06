@@ -67,6 +67,10 @@ func CountBooks(words, searchMode, rate string) (int64, error) {
 
 // ListBooks returns number of books in given page.
 func QueryBooks(page int, words, searchMode, orderby, direction, rate string) ([]*Book, error) {
+	// Validate page number
+	if page < 1 {
+		page = 1
+	}
 	pageSize := conf.PageSize(0)
 	books := make([]*Book, 0, pageSize)
 
@@ -89,11 +93,11 @@ func QueryBooks(page int, words, searchMode, orderby, direction, rate string) ([
 	return books, session.Limit(pageSize, (page-1)*pageSize).Find(&books)
 }
 
-// ListBooks returns number of books in given page.
-func QueryBooksByIds(ids []int64) ([]*Book, error) {
-	books := make([]*Book, 0, len(ids))
+// QueryBooksByAuthorIds returns books by author IDs.
+func QueryBooksByAuthorIds(authorIds []int64) ([]*Book, error) {
+	books := make([]*Book, 0, len(authorIds))
 
-	return books, x.Table("book").Select("id, title,authorid").In("authorid", ids).Find(&books)
+	return books, x.Table("book").Select("id, title,authorid").In("authorid", authorIds).Find(&books)
 }
 
 func QueryAllBookIds() ([]int64, error) {
@@ -124,24 +128,24 @@ func QueryCountsByCategory() (map[int64]int64, error) {
 }
 
 // QueryLatestChapters returns latest chapters of given books.
-func QueryLatestChapters(bookids []int64) map[int64]string {
-
+func QueryLatestChapters(bookids []int64) (map[int64]string, error) {
 	var results []map[string]string
 
-	sql, _ := builder.Select("bookid, title").
+	subQuery := builder.Select("MAX(id) AS id").
 		From("chapter").
-		Where(
-			builder.In("id",
-				builder.Expr(
-					builder.Select("MAX(id) AS id").
-						From("chapter").
-						Where(builder.In("bookid", bookids)).
-						GroupBy("bookid").
-						ToBoundSQL()))).
-		ToBoundSQL()
+		Where(builder.In("bookid", bookids)).
+		GroupBy("bookid")
 
-	if err := x.SQL(sql).Find(&results); err != nil {
-		panic(fmt.Sprintf("Cannot query books latest chapters, sql: %s, error: %s", sql, err.Error()))
+	sql, args, err := builder.Select("bookid, title").
+		From("chapter").
+		Where(builder.In("id", subQuery)).
+		ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("cannot build SQL for latest chapters: %w", err)
+	}
+
+	if err := x.SQL(sql, args...).Find(&results); err != nil {
+		return nil, fmt.Errorf("cannot query books latest chapters, sql: %s, error: %w", sql, err)
 	}
 
 	chaps := make(map[int64]string, len(results))
@@ -149,10 +153,10 @@ func QueryLatestChapters(bookids []int64) map[int64]string {
 		chaps[util.ParamInt64(v["bookid"])] = v["title"]
 	}
 
-	return chaps
+	return chaps, nil
 }
 
-func QueryVolumeChapters(bookid, volumeid int64) []map[string]string {
+func QueryVolumeChapters(bookid, volumeid int64) ([]map[string]string, error) {
 	volume_chapters_sql := "SELECT txt AS content,cha.title " +
 		"FROM chapter AS cha " +
 		"INNER JOIN content AS content ON cha.id=content.chapterid " +
@@ -161,13 +165,13 @@ func QueryVolumeChapters(bookid, volumeid int64) []map[string]string {
 	var results []map[string]string
 
 	if err := x.SQL(volume_chapters_sql, bookid, volumeid).Find(&results); err != nil {
-		panic(fmt.Sprintf("Cannot query book(%d)-vol(%d) chapters, %s", bookid, volumeid, err.Error()))
+		return nil, fmt.Errorf("cannot query book(%d)-vol(%d) chapters: %w", bookid, volumeid, err)
 	}
 
-	return results
+	return results, nil
 }
 
-func QueryAllChapters(bookid int64) []map[string]string {
+func QueryAllChapters(bookid int64) ([]map[string]string, error) {
 	chapters_sql := "SELECT txt AS content,cha.title,vol.title AS volTitle " +
 		"FROM chapter AS cha " +
 		"INNER JOIN content AS content ON cha.id=content.chapterid " +
@@ -177,14 +181,13 @@ func QueryAllChapters(bookid int64) []map[string]string {
 	var results []map[string]string
 
 	if err := x.SQL(chapters_sql, bookid).Find(&results); err != nil {
-		panic(fmt.Sprintf("Cannot query book(%d) chapters, %s", bookid, err.Error()))
+		return nil, fmt.Errorf("cannot query book(%d) chapters: %w", bookid, err)
 	}
 
-	return results
+	return results, nil
 }
 
-func QueryBooksByKeywords(words string, bookid int64) []map[string]string {
-
+func QueryBooksByKeywords(words string, bookid int64) ([]map[string]string, error) {
 	search_books_sql := "SELECT txt AS content,cha.id AS chaId,cha.title AS chaTitle,vol.title AS volTitle " +
 		",volumeid AS volId,book.id AS bookId,book.title AS bookTitle,au.name AS author " +
 		"FROM chapter AS cha " +
@@ -206,27 +209,30 @@ func QueryBooksByKeywords(words string, bookid int64) []map[string]string {
 	search_books_sql = strings.Replace(search_books_sql, "_BOOKID_CONDITION_", bookidCond, 1)
 
 	if err := x.SQL(search_books_sql, args...).Find(&results); err != nil {
-		panic(fmt.Sprintf("Cannot query book(%d) by keywords(%s) chapters, %s", bookid, words, err.Error()))
+		return nil, fmt.Errorf("cannot query book(%d) by keywords(%s) chapters: %w", bookid, words, err)
 	}
 
-	return results
+	return results, nil
 }
 
-func QueryBooksSize() map[string]string {
+func QueryBooksSize() (map[string]string, error) {
 	if conf.UseMySQL {
 		sql := "SELECT CEILING(sum(data_length)/1024/1024) AS data_size, CEILING(sum(index_length)/1024/1024) AS index_size FROM information_schema.tables WHERE TABLE_SCHEMA = ?"
 		var results []map[string]string
 		if err := x.SQL(sql, conf.Database.Name).Find(&results); err != nil {
-			panic(fmt.Sprintf("Cannot query books size, %s", err.Error()))
+			return nil, fmt.Errorf("cannot query books size: %w", err)
 		}
-		return results[0]
+		if len(results) == 0 {
+			return map[string]string{"data_size": "0", "index_size": "0"}, nil
+		}
+		return results[0], nil
 	} else if conf.UseSQLite {
 		// Get page count and page size via PRAGMA
 		var pageSize, pageCount int64
 		// Query page_size
 		var sizeResults []map[string]string
 		if err := x.SQL("PRAGMA page_size;").Find(&sizeResults); err != nil {
-			panic(fmt.Sprintf("Cannot query SQLite page_size, %s", err.Error()))
+			return nil, fmt.Errorf("cannot query SQLite page_size: %w", err)
 		}
 		if len(sizeResults) > 0 {
 			for _, v := range sizeResults[0] {
@@ -237,7 +243,7 @@ func QueryBooksSize() map[string]string {
 		// Query page_count
 		var countResults []map[string]string
 		if err := x.SQL("PRAGMA page_count;").Find(&countResults); err != nil {
-			panic(fmt.Sprintf("Cannot query SQLite page_count, %s", err.Error()))
+			return nil, fmt.Errorf("cannot query SQLite page_count: %w", err)
 		}
 		if len(countResults) > 0 {
 			for _, v := range countResults[0] {
@@ -255,9 +261,9 @@ func QueryBooksSize() map[string]string {
 		return map[string]string{
 			"data_size":  strconv.FormatInt(totalMB, 10),
 			"index_size": "0",
-		}
+		}, nil
 	}
-	panic("unknown database type")
+	return nil, fmt.Errorf("unknown database type")
 }
 
 // QueryBook gets a book info
@@ -312,7 +318,7 @@ func UpdateBook(book *Book, bookid int64) (int64, error) {
 
 		bookid = book.Id
 	} else {
-		if _, err = sess.ID(bookid).Cols("categoryid", "title", "authorid", "alias", "summary", "source", "wordcound", "isfinished", "rate").Update(book); err != nil {
+		if _, err = sess.ID(bookid).Cols("categoryid", "title", "authorid", "alias", "summary", "source", "wordcount", "isfinished", "rate").Update(book); err != nil {
 			return 0, err
 		}
 	}

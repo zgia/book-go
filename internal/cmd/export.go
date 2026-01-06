@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	log "zgia.net/book/internal/logger"
-	"zgia.net/book/internal/route"
+	"zgia.net/book/internal/models"
 	"zgia.net/book/internal/util"
 )
 
@@ -45,7 +45,7 @@ func runText(c *cli.Context) error {
 		return errors.New(msg)
 	}
 
-	route.SaveAllBooksToTxt(c.Int64("bookid"), strings.TrimSuffix(path, "/"))
+	models.SaveAllBooksToTxt(c.Int64("bookid"), strings.TrimSuffix(path, "/"))
 
 	return nil
 }

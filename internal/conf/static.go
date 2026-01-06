@@ -80,8 +80,8 @@ type DatabaseOpts struct {
 var Database DatabaseOpts
 
 type i18nConf struct {
-	Langs     []string          `delim:","`
-	Names     []string          `delim:","`
+	Langs []string `delim:","`
+	Names []string `delim:","`
 }
 
 // I18n settings
@@ -89,6 +89,6 @@ var I18n *i18nConf
 
 // Indicates which database backend is currently being used.
 var (
-	UseMySQL bool
+	UseMySQL  bool
 	UseSQLite bool
 )

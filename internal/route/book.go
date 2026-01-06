@@ -17,7 +17,11 @@ func SearchBooks(c *gin.Context) {
 	words := c.Query("q")
 	bookid := util.ParamInt64(c.Query("bookid"))
 
-	books := models.SearchBooks(words, bookid)
+	books, err := models.SearchBooks(words, bookid)
+	if err != nil {
+		Json500(c, fmt.Sprintf("Search books: %s", err.Error()))
+		return
+	}
 
 	Json200(c, books)
 }
@@ -43,9 +47,12 @@ func ListBooks(c *gin.Context) {
 	Json200(c, books)
 }
 
-func getBooksSize(c *gin.Context) {
-
-	result := models.GetBooksSize()
+func GetBooksSize(c *gin.Context) {
+	result, err := models.GetBooksSize()
+	if err != nil {
+		Json500(c, fmt.Sprintf("Get books size: %s", err.Error()))
+		return
+	}
 
 	Json200(c, result)
 }
@@ -54,7 +61,8 @@ func BookExists(c *gin.Context, bookid int64) *db.Book {
 	book, err := db.QueryBook(bookid)
 
 	if err != nil {
-		panic(err.Error())
+		Json500(c, fmt.Sprintf("Query book(%d): %s", bookid, err.Error()))
+		return nil
 	}
 
 	if book == nil {
@@ -76,42 +84,6 @@ func GetBook(c *gin.Context) {
 	Json200(c, models.GetBook(book))
 }
 
-func SaveAllBooksToTxt(bookId int64, savedPath string) {
-	ids, err := db.QueryAllBookIds()
-	if err != nil {
-		log.Errorf("%v", err)
-		return
-	}
-
-	i := 0
-	for _, id := range ids {
-		if id < bookId {
-			continue
-		}
-
-		book, err := db.QueryBook(id)
-		if err != nil {
-			log.Errorf("%v", err)
-			continue
-		}
-		if book == nil {
-			log.Errorf("book %d is not exist", id)
-			continue
-		}
-
-		i++
-		chapters := db.QueryAllChapters(id)
-		fpath := models.WriteToFile(book, chapters)
-
-		srcInfo, _ := os.Lstat(fpath)
-		util.MoveFile(fpath, fmt.Sprintf("%s/%d-%s", savedPath, id, srcInfo.Name()))
-
-		log.Infof("book %d save to %s...", id, fpath)
-	}
-
-	log.Infof("%d books saved", i)
-}
-
 // DownloadBook downloads book to plain text file
 func DownloadBook(c *gin.Context) {
 	bookid := util.ParamInt64(c.Param("bookid"))
@@ -121,7 +93,11 @@ func DownloadBook(c *gin.Context) {
 		return
 	}
 
-	chapters := db.QueryAllChapters(bookid)
+	chapters, err := db.QueryAllChapters(bookid)
+	if err != nil {
+		Json500(c, fmt.Sprintf("Download book(%d): %s", bookid, err.Error()))
+		return
+	}
 
 	fpath := models.WriteToFile(book, chapters)
 

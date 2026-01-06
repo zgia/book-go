@@ -2,6 +2,7 @@ package route
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -31,7 +32,8 @@ func AuthorExists(c *gin.Context, id int64) *db.Author {
 	author, err := db.QueryAuthor(id)
 
 	if err != nil {
-		panic(err.Error())
+		Json500(c, fmt.Sprintf("Query author(%d): %s", id, err.Error()))
+		return nil
 	}
 
 	if author == nil {
@@ -55,10 +57,21 @@ func GetAuthor(c *gin.Context) {
 
 func UpdateAuthor(c *gin.Context) {
 	authorid := util.ParamInt64(c.Param("authorid"))
+	if authorid <= 0 {
+		Json404(c, fmt.Sprintf("Invalid author id: %d", authorid))
+		return
+	}
+
+	name := strings.TrimSpace(c.PostForm("name"))
+	if name == "" {
+		Json500(c, "Author name cannot be empty")
+		return
+	}
+	formerName := strings.TrimSpace(c.PostForm("former_name"))
 
 	author := &db.Author{
-		Name:       c.PostForm("name"),
-		FormerName: c.PostForm("former_name"),
+		Name:       name,
+		FormerName: formerName,
 	}
 
 	authorid, err := db.UpdateAuthor(author, authorid)
@@ -73,6 +86,11 @@ func UpdateAuthor(c *gin.Context) {
 
 func DeleteAuthor(c *gin.Context) {
 	authorid := util.ParamInt64(c.Param("authorid"))
+	if authorid <= 0 {
+		Json404(c, fmt.Sprintf("Invalid author id: %d", authorid))
+		return
+	}
+
 	_, err := db.DeleteAuthor(authorid)
 
 	if err != nil {

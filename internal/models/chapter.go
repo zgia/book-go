@@ -33,7 +33,10 @@ func ListChapters(book *db.Book) (map[string]any, error) {
 		return nil, err
 	}
 
-	volumes, _ := db.QueryVolumes(book.Id)
+	volumes, err := db.QueryVolumes(book.Id)
+	if err != nil {
+		return nil, err
+	}
 	if len(volumes) == 0 {
 		volumes = make([]*db.Volume, 1)
 		volumes[0] = &db.Volume{Id: 0, Title: book.Title, Summary: ""}

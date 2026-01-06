@@ -8,6 +8,7 @@ type Category struct {
 	Id       int64 `xorm:"pk autoincr"`
 	Parentid int64
 	Title    string
+	IsHidden int64
 }
 
 // 接口返回
@@ -15,6 +16,7 @@ type CategoryResult struct {
 	Id       int64
 	Parentid int64
 	Title    string
+	IsHidden int64
 }
 
 func (b *Category) String() string {
@@ -25,6 +27,24 @@ func (b *Category) String() string {
 func QueryCategories() ([]*Category, error) {
 	var categories []*Category
 	return categories, x.Asc("id").Find(&categories)
+}
+
+// QueryCategory gets a category info
+func QueryCategory(catid int64) (*Category, error) {
+	category := &Category{
+		Id: catid,
+	}
+	has, err := x.Get(category)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !has {
+		return nil, nil
+	}
+
+	return category, nil
 }
 
 // UpdateCategory updates/creates a category
@@ -41,17 +61,20 @@ func UpdateCategory(cat *Category, catid int64) (int64, error) {
 	if catid == 0 {
 		_, err = sess.Insert(cat)
 		if err != nil {
+			sess.Rollback()
 			return 0, err
 		}
 
 		catid = cat.Id
 	} else {
-		if _, err = sess.ID(catid).Cols("id", "title").Update(cat); err != nil {
+		if _, err = sess.ID(catid).Cols("title").Update(cat); err != nil {
+			sess.Rollback()
 			return 0, err
 		}
 	}
 
 	if err = sess.Commit(); err != nil {
+		sess.Rollback()
 		return 0, err
 	}
 

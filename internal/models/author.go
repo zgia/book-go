@@ -2,7 +2,6 @@ package models
 
 import (
 	"zgia.net/book/internal/db"
-	log "zgia.net/book/internal/logger"
 )
 
 type AuthorBooks struct {
@@ -30,17 +29,23 @@ func ListAuthors(page int, words string) (map[string]any, error) {
 	for _, v := range authors {
 		aids = append(aids, v.Id)
 	}
-	books, _ := db.QueryBooksByIds(aids)
 
 	grouped := make(map[int64][]AuthorBooks)
-	for _, book := range books {
-		res := AuthorBooks{
-			Id:    book.Id,
-			Title: book.Title,
+	if len(aids) > 0 {
+		books, err := db.QueryBooksByAuthorIds(aids)
+		if err != nil {
+			return nil, err
 		}
-		grouped[book.Authorid] = append(grouped[book.Authorid], res)
+
+		for _, book := range books {
+			res := AuthorBooks{
+				Id:    book.Id,
+				Title: book.Title,
+			}
+			grouped[book.Authorid] = append(grouped[book.Authorid], res)
+		}
 	}
-	log.Infof("ListAuthors: %#v", grouped)
+	// log.Infof("ListAuthors: %#v", grouped)
 
 	// 保留必要元素
 	ats := make([]*AuthorResult, len(authors))

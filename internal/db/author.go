@@ -107,7 +107,8 @@ func UpdateAuthor(author *Author, authorid int64) (int64, error) {
 
 		authorid = author.Id
 	} else {
-		if _, err = sess.Table(TableName()).ID(authorid).Cols("name", "former_name").Update(author); err != nil {
+		author.Updatedat = time.Now().Unix()
+		if _, err = sess.Table(TableName()).ID(authorid).Cols("name", "former_name", "updatedat").Update(author); err != nil {
 			return 0, err
 		}
 	}

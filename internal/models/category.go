@@ -10,6 +10,7 @@ type CategoryResult struct {
 	Parentid  int64  `json:"parentid"`
 	Title     string `json:"title"`
 	BookCount int64  `json:"bookcount"`
+	IsHidden  int64  `json:"ishidden"`
 }
 
 func ListCategories() ([]*CategoryResult, error) {
@@ -20,7 +21,10 @@ func ListCategories() ([]*CategoryResult, error) {
 		return nil, err
 	}
 
-	count, _ := db.QueryCountsByCategory()
+	count, err := db.QueryCountsByCategory()
+	if err != nil {
+		return nil, err
+	}
 
 	vr := make([]*CategoryResult, len(categories))
 
@@ -30,6 +34,7 @@ func ListCategories() ([]*CategoryResult, error) {
 			Parentid:  v.Parentid,
 			Title:     v.Title,
 			BookCount: count[v.Id],
+			IsHidden:  v.IsHidden,
 		}
 	}
 

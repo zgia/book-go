@@ -1,8 +1,10 @@
 package models
 
 import (
-	"zgia.net/book/internal/db"
+	"fmt"
+	"os"
 
+	"zgia.net/book/internal/db"
 	log "zgia.net/book/internal/logger"
 	"zgia.net/book/internal/util"
 )
@@ -24,20 +26,52 @@ type BookResult struct {
 	Rate             int64  `json:"rate"`
 }
 
-func SearchBooks(words string, bookid int64) []map[string]string {
-	log.Infof("SearchBooks: %s", words)
-	chapters := db.QueryBooksByKeywords(words, bookid)
-
-	for _, v := range chapters {
-		v["content"] = util.SearchResult(v["content"], words, 40)
-
-		log.Infof("SearchBooks: %#v", v)
-	}
-
-	return chapters
+// 搜索返回
+type SearchResult struct {
+	Content   string `json:"content"`
+	ChaId     string `json:"chaId"`
+	ChaTitle  string `json:"chaTitle"`
+	VolTitle  string `json:"volTitle"`
+	VolId     string `json:"volId"`
+	BookId    string `json:"bookId"`
+	BookTitle string `json:"bookTitle"`
+	Author    string `json:"author"`
 }
 
-func ListBooks(page int, words, searchMode, orderby, direction, rate string) (map[string]any, error) {
+// 分页书籍返回
+type PagedBooksResult struct {
+	Total int64         `json:"total"`
+	Items []*BookResult `json:"items"`
+}
+
+func SearchBooks(words string, bookid int64) ([]SearchResult, error) {
+	log.Infof("SearchBooks: %s", words)
+	chapters, err := db.QueryBooksByKeywords(words, bookid)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]SearchResult, 0, len(chapters))
+	for _, v := range chapters {
+		content := util.SearchResult(v["content"], words, 40)
+		result := SearchResult{
+			Content:   content,
+			ChaId:     v["chaId"],
+			ChaTitle:  v["chaTitle"],
+			VolTitle:  v["volTitle"],
+			VolId:     v["volId"],
+			BookId:    v["bookId"],
+			BookTitle: v["bookTitle"],
+			Author:    v["author"],
+		}
+		results = append(results, result)
+		log.Infof("SearchBooks: %#v", result)
+	}
+
+	return results, nil
+}
+
+func ListBooks(page int, words, searchMode, orderby, direction, rate string) (*PagedBooksResult, error) {
 	books, err := db.QueryBooks(page, words, searchMode, orderby, direction, rate)
 
 	if err != nil {
@@ -50,16 +84,20 @@ func ListBooks(page int, words, searchMode, orderby, direction, rate string) (ma
 		bs[i] = GetBook(v)
 	}
 
-	total, _ := db.CountBooks(words, searchMode, rate)
-	data := map[string]any{
-		"total": total,
-		"items": bs,
+	total, err := db.CountBooks(words, searchMode, rate)
+	if err != nil {
+		return nil, err
 	}
 
-	return data, nil
+	result := &PagedBooksResult{
+		Total: total,
+		Items: bs,
+	}
+
+	return result, nil
 }
 
-func GetBooksSize() map[string]string {
+func GetBooksSize() (map[string]string, error) {
 	return db.QueryBooksSize()
 }
 
@@ -80,4 +118,45 @@ func GetBook(book *db.Book) *BookResult {
 		Isfinished:       book.Isfinished,
 		Rate:             book.Rate,
 	}
+}
+
+// SaveAllBooksToTxt saves all books to text files
+func SaveAllBooksToTxt(bookId int64, savedPath string) {
+	ids, err := db.QueryAllBookIds()
+	if err != nil {
+		log.Errorf("%v", err)
+		return
+	}
+
+	i := 0
+	for _, id := range ids {
+		if id < bookId {
+			continue
+		}
+
+		book, err := db.QueryBook(id)
+		if err != nil {
+			log.Errorf("%v", err)
+			continue
+		}
+		if book == nil {
+			log.Errorf("book %d is not exist", id)
+			continue
+		}
+
+		i++
+		chapters, err := db.QueryAllChapters(id)
+		if err != nil {
+			log.Errorf("QueryAllChapters(%d): %v", id, err)
+			continue
+		}
+		fpath := WriteToFile(book, chapters)
+
+		srcInfo, _ := os.Lstat(fpath)
+		util.MoveFile(fpath, fmt.Sprintf("%s/%d-%s", savedPath, id, srcInfo.Name()))
+
+		log.Infof("book %d save to %s...", id, fpath)
+	}
+
+	log.Infof("%d books saved", i)
 }

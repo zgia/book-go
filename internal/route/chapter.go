@@ -20,12 +20,32 @@ func GetVolumeChapters(c *gin.Context) {
 		return
 	}
 
-	chapters := db.QueryVolumeChapters(bookid, volumeid)
+	chapters, err := db.QueryVolumeChapters(bookid, volumeid)
+	if err != nil {
+		Json500(c, fmt.Sprintf("Get volume chapters(%d,%d): %s", bookid, volumeid, err.Error()))
+		return
+	}
 
 	content := models.GetVolumeChapters(book, chapters)
 
 	data := map[string]string{"content": content}
 	Json200(c, data)
+}
+
+func ChapterExists(c *gin.Context, bookid, chapterid int64) map[string]any {
+	chapter, err := db.QueryChapter(bookid, chapterid, 0)
+
+	if err != nil {
+		Json500(c, fmt.Sprintf("Query chapter(%d,%d): %s", bookid, chapterid, err.Error()))
+		return nil
+	}
+
+	if chapter == nil {
+		Json404(c, fmt.Sprintf("Chapter(%d,%d) not found", bookid, chapterid))
+		return nil
+	}
+
+	return chapter
 }
 
 // ListChapters gets all chapters
@@ -86,11 +106,30 @@ func UpdateChapter(c *gin.Context) {
 	chapterid := util.ParamInt64(c.Param("chapterid"))
 	bookid := util.ParamInt64(c.Param("bookid"))
 
-	postCont := c.PostForm("content")
-	content := &db.Content{Txt: postCont}
+	// 检查书籍是否存在
+	book := BookExists(c, bookid)
+	if book == nil {
+		return
+	}
 
+	title := c.PostForm("title")
+	postCont := c.PostForm("content")
+	if title == "" || postCont == "" {
+		Json500(c, "Chapter title and content cannot be empty")
+		return
+	}
+
+	// 检查章节是否存在（更新时）
+	if chapterid > 0 {
+		chapter := ChapterExists(c, bookid, chapterid)
+		if chapter == nil {
+			return
+		}
+	}
+
+	content := &db.Content{Txt: postCont}
 	chapter := &db.Chapter{
-		Title:     c.PostForm("title"),
+		Title:     title,
 		Bookid:    bookid,
 		Volumeid:  util.ParamInt64(c.PostForm("volumeid")),
 		Wordcount: int64(len([]rune(postCont))),
@@ -109,6 +148,24 @@ func UpdateChapter(c *gin.Context) {
 // DeleteChapter deletes a chapter
 func DeleteChapter(c *gin.Context) {
 	chapterid := util.ParamInt64(c.Param("chapterid"))
+	bookid := util.ParamInt64(c.Param("bookid"))
+
+	if chapterid <= 0 {
+		Json404(c, fmt.Sprintf("Invalid chapter id: %d", chapterid))
+		return
+	}
+
+	// 检查书籍是否存在
+	book := BookExists(c, bookid)
+	if book == nil {
+		return
+	}
+
+	// 检查章节是否存在
+	chapter := ChapterExists(c, bookid, chapterid)
+	if chapter == nil {
+		return
+	}
 
 	if _, err := db.DeleteChapter(chapterid); err != nil {
 		Json500(c, fmt.Sprintf("Delete chapter(%d): %s", chapterid, err.Error()))

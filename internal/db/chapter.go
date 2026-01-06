@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"go.uber.org/zap"
 	log "zgia.net/book/internal/logger"
 	"zgia.net/book/internal/util"
 )
@@ -30,9 +29,9 @@ func (b *Chapter) String() string {
 }
 
 // CountChapters returns number of chapters.
-func CountChapters() int64 {
-	count, _ := x.Count(new(Chapter))
-	return count
+func CountChapters() (int64, error) {
+	count, err := x.Count(new(Chapter))
+	return count, err
 }
 
 // ListChapters returns number of chapters in given page.
@@ -135,18 +134,20 @@ func UpdateChapter(chapterid int64, chapter *Chapter, content *Content) (int64, 
 		return 0, err
 	}
 
-	cols := "wordcount"
+	cols := "wordcount,updatedat"
 	book := &Book{Updatedat: time.Now().Unix()}
 
 	if chapterid == 0 {
 		_, err = sess.Insert(chapter)
 		if err != nil {
+			sess.Rollback()
 			return 0, err
 		}
 
 		content.Chapterid = chapter.Id
 		_, err = sess.Insert(content)
 		if err != nil {
+			sess.Rollback()
 			return 0, err
 		}
 
@@ -157,26 +158,32 @@ func UpdateChapter(chapterid int64, chapter *Chapter, content *Content) (int64, 
 		chapterid = chapter.Id
 	} else {
 		if _, err = sess.ID(chapterid).Update(chapter); err != nil {
+			sess.Rollback()
 			return 0, err
 		}
 
 		_, err = sess.Update(content, &Content{Chapterid: chapterid})
 		if err != nil {
+			sess.Rollback()
 			return 0, err
 		}
 	}
 
 	// 更新Book字数
-	if total, err := sess.Where("bookid=?", chapter.Bookid).SumInt(new(Chapter), "wordcount"); err == nil {
-		book.Wordcount = total
+	total, err := sess.Where("bookid=?", chapter.Bookid).SumInt(new(Chapter), "wordcount")
+	if err != nil {
+		sess.Rollback()
+		return 0, err
+	}
+	book.Wordcount = total
 
-		// 忽略错误
-		if _, err = sess.ID(chapter.Bookid).Cols(cols).Update(book); err != nil {
-			log.Info("UpdateBookWordCount", zap.String("err", err.Error()))
-		}
+	if _, err = sess.ID(chapter.Bookid).Cols(cols).Update(book); err != nil {
+		sess.Rollback()
+		return 0, err
 	}
 
 	if err = sess.Commit(); err != nil {
+		sess.Rollback()
 		return 0, err
 	}
 

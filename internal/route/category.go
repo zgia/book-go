@@ -22,12 +22,42 @@ func ListCategories(c *gin.Context) {
 	Json200(c, categories)
 }
 
+func CategoryExists(c *gin.Context, id int64) *db.Category {
+	category, err := db.QueryCategory(id)
+
+	if err != nil {
+		Json500(c, fmt.Sprintf("Query category(%d): %s", id, err.Error()))
+		return nil
+	}
+
+	if category == nil {
+		Json404(c, fmt.Sprintf("Category(%d) not found", id))
+		return nil
+	}
+
+	return category
+}
+
 func UpdateCategory(c *gin.Context) {
 	catid := util.ParamInt64(c.Param("catid"))
 
+	title := c.PostForm("title")
+	if title == "" {
+		Json500(c, "Category title cannot be empty")
+		return
+	}
+
+	// 检查类别是否存在（更新时）
+	if catid > 0 {
+		category := CategoryExists(c, catid)
+		if category == nil {
+			return
+		}
+	}
+
 	cat := &db.Category{
 		Id:    catid,
-		Title: c.PostForm("title"),
+		Title: title,
 	}
 
 	catid, err := db.UpdateCategory(cat, catid)
@@ -42,6 +72,17 @@ func UpdateCategory(c *gin.Context) {
 
 func DeleteCategory(c *gin.Context) {
 	catid := util.ParamInt64(c.Param("catid"))
+	if catid <= 0 {
+		Json404(c, fmt.Sprintf("Invalid category id: %d", catid))
+		return
+	}
+
+	// 检查类别是否存在
+	category := CategoryExists(c, catid)
+	if category == nil {
+		return
+	}
+
 	_, err := db.DeleteCategory(catid)
 
 	if err != nil {

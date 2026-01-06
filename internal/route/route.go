@@ -30,6 +30,13 @@ func callerFuncName() string {
 	return strings.Replace(runtime.FuncForPC(counter).Name(), "zgia.net/book/", "", 1)
 }
 
+func Json401(c *gin.Context, msg string) {
+	c.JSON(http.StatusUnauthorized, gin.H{
+		"code": http.StatusUnauthorized,
+		"msg":  msg,
+	})
+}
+
 func Json404(c *gin.Context, msg string) {
 	c.JSON(http.StatusNotFound, gin.H{
 		"code": http.StatusNotFound,
@@ -99,7 +106,7 @@ func routerBook(authMiddleware *jwt.GinJWTMiddleware) {
 		book.Use(authMiddleware.MiddlewareFunc())
 		{
 			book.GET("/books", ListBooks)
-			book.GET("/books/size", getBooksSize)
+			book.GET("/books/size", GetBooksSize)
 			book.GET("/:bookid", GetBook)
 			book.POST("/:bookid", UpdateBook)
 			book.DELETE("/:bookid", DeleteBook)
