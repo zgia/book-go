@@ -10,7 +10,7 @@ type CategoryResult struct {
 	Parentid  int64  `json:"parentid"`
 	Title     string `json:"title"`
 	BookCount int64  `json:"bookcount"`
-	IsHidden  int64  `json:"ishidden"`
+	Ishidden  int64  `json:"ishidden"`
 }
 
 func ListCategories() ([]*CategoryResult, error) {
@@ -34,7 +34,7 @@ func ListCategories() ([]*CategoryResult, error) {
 			Parentid:  v.Parentid,
 			Title:     v.Title,
 			BookCount: count[v.Id],
-			IsHidden:  v.IsHidden,
+			Ishidden:  v.Ishidden,
 		}
 	}
 

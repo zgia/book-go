@@ -8,7 +8,7 @@ type Category struct {
 	Id       int64 `xorm:"pk autoincr"`
 	Parentid int64
 	Title    string
-	IsHidden int64
+	Ishidden int64
 }
 
 // 接口返回
@@ -16,7 +16,7 @@ type CategoryResult struct {
 	Id       int64
 	Parentid int64
 	Title    string
-	IsHidden int64
+	Ishidden int64
 }
 
 func (b *Category) String() string {
